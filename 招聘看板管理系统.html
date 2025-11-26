@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>招聘看板管理系统</title>
+    <style>
+        /* ==================== CSS 样式 ==================== */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+        }
+
+        /* ------------------ 顶部 Tab 样式 ------------------ */
+        .header {
+            background-color: #ffffff;
+            padding: 10px 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 5px;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            padding: 8px 15px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
+            background-color: #f7f7f7;
+            transition: background-color 0.2s;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            background-color: #eee;
+        }
+
+        .tab-btn.active {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-bottom: 2px solid #007bff; /* 蓝色高亮 */
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        #newJobBtn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: auto; /* 推到最右边 */
+        }
+
+        /* ------------------ Dashboard 区域 ------------------ */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            background-color: #ffffff;
+            margin: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .dashboard-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            min-height: 300px;
+        }
+
+        .dashboard-card h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 250px;
+        }
+
+        /* 岗位画像部分 */
+        .job-profile-section {
+            grid-column: span 2;
+        }
+
+        .profile-form-group {
+            margin-bottom: 15px;
+        }
+
+        .profile-form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .profile-form-group textarea,
+        .profile-form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .profile-form-group textarea {
+            height: 80px;
+            resize: vertical;
+        }
+
+        .save-profile-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            float: right;
+        }
+
+        /* ------------------ 看板容器 ------------------ */
+        .kanban-board {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            overflow-x: auto; /* 允许横向滚动 */
+        }
+
+        .stage-column {
+            background-color: #e8ebf0;
+            border-radius: 8px;
+            min-width: 300px; /* 看板列最小宽度 */
+            padding: 15px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .stage-header {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #ddd;
+        }
+
+        /* ------------------ 候选人卡片 ------------------ */
+        .candidate-card {
+            background-color: #ffffff;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+            cursor: grab; /* 提示可拖拽 */
+            transition: transform 0.2s, box-shadow 0.2s;
+            border-left: 5px solid; /* 用于颜色标记 */
+        }
+
+        .candidate-card:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .card-name {
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 5px;
+            border-bottom: 1px dotted #ccc;
+            padding-bottom: 3px;
+        }
+
+        .card-detail {
+            font-size: 0.9em;
+            color: #555;
+            line-height: 1.4;
+        }
+
+        .card-notes {
+            font-size: 0.85em;
+            color: #666;
+            background-color: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 8px;
+            border-left: 3px solid #007bff;
+        }
+
+        /* ------------------ 阶段颜色标记 (从黄到绿的渐变) ------------------ */
+        /* Sourcing - 黄色 */
+        .stage-sourcing { border-left-color: #ffc107; }
+        /* Screening - 浅黄绿 */
+        .stage-screening { border-left-color: #c8e613; }
+        /* Phone Chat - 黄绿 */
+        .stage-phonechat { border-left-color: #a1cc2b; }
+        /* Interview Panel - 绿色 */
+        .stage-interviewpanel { border-left-color: #78b745; }
+        /* Offer - 深绿 */
+        .stage-offer { border-left-color: #4caf50; }
+        /* On Board - 深翠绿 */
+        .stage-onboard { border-left-color: #28a745; }
+
+        /* 拖拽反馈样式 */
+        .dragging {
+            opacity: 0.4;
+            transform: scale(0.98);
+        }
+
+        .drop-zone-highlight {
+            background-color: rgba(0, 123, 255, 0.1);
+            border: 2px dashed #007bff;
+            min-height: 50px; /* 确保拖拽目标可见 */
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 8px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .form-actions {
+            text-align: right;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-info {
+            background-color: #17a2b8;
+            color: white;
+        }
+
+        .add-candidate-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            float: right;
+            font-size: 12px;
+        }
+
+        /* JD Tooltip */
+        .jd-tooltip {
+            display: none;
+            position: absolute;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            z-index: 100;
+        }
+
+        .jd-tooltip h3 {
+            margin-top: 0;
+        }
+
+        .jd-tooltip textarea {
+            width: 100%;
+            height: 100px;
+            margin-bottom: 10px;
+        }
+
+        .jd-tooltip button {
+            margin-right: 5px;
+        }
+        
+        /* Charts */
+        .chart {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Tree Diagram */
+        .tree-node {
+            position: relative;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        
+        .tree-node:hover {
+            background: #dee2e6;
+        }
+        
+        .tree-children {
+            margin-left: 20px;
+        }
+        
+        /* Notification */
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #fff;
+            border-left: 4px solid #28a745;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 15px 20px;
+            z-index: 2000;
+            transform: translateX(120%);
+            transition: transform 0.3s ease-in-out;
+            max-width: 350px;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification.success {
+            border-left-color: #28a745;
+        }
+        
+        .notification.error {
+            border-left-color: #dc3545;
+        }
+        
+        .notification.info {
+            border-left-color: #17a2b8;
+        }
+        
+        /* Stage Stats */
+        .stage-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .stage-stat {
+            background: #e9ecef;
+            padding: 8px 12px;
+            border-radius: 4px;
+            flex: 1;
+            min-width: 120px;
+            text-align: center;
+        }
+        
+        .stage-stat .count {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>招聘看板</h2>
+        <div class="tabs" id="jobTabs">
+            <button id="newJobBtn">➕ 新建职位</button>
+        </div>
+    </div>
+
+    <!-- Dashboard 区域 -->
+    <div class="dashboard-container" id="dashboardContainer">
+        <!-- 统计图表将通过JavaScript动态生成 -->
+    </div>
+
+    <div id="kanbanContainer" class="kanban-board">
+        </div>
+
+    <!-- Candidate Detail/Edit Modal -->
+    <div id="candidateModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modalTitle">候选人详情</h2>
+            <form id="candidateForm">
+                <input type="hidden" id="candidateId">
+                <div class="form-group">
+                    <label for="candidateName">姓名:</label>
+                    <input type="text" id="candidateName" required>
+                </div>
+                <div class="form-group">
+                    <label for="candidateEmail">邮箱:</label>
+                    <input type="email" id="candidateEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="lastCompany">最近公司:</label>
+                    <input type="text" id="lastCompany">
+                </div>
+                <div class="form-group">
+                    <label for="lastJob">最近职位:</label>
+                    <input type="text" id="lastJob">
+                </div>
+                <div class="form-group">
+                    <label for="education">教育背景:</label>
+                    <input type="text" id="education">
+                </div>
+                <div class="form-group">
+                    <label for="candidateStage">阶段:</label>
+                    <select id="candidateStage">
+                        <option value="sourcing">寻源 (Sourcing)</option>
+                        <option value="screening">简历筛选 (Screening)</option>
+                        <option value="phonechat">电话沟通 (Phone Chat)</option>
+                        <option value="interviewpanel">团队面试 (Interview Panel)</option>
+                        <option value="offer">录用通知 (Offer)</option>
+                        <option value="onboard">已入职 (On Board)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="candidateNotes">备注:</label>
+                    <textarea id="candidateNotes" rows="4"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelBtn">取消</button>
+                    <button type="submit" class="btn btn-primary" id="saveBtn">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JD Tooltip -->
+    <div id="jdTooltip" class="jd-tooltip">
+        <h3 id="jdTooltipTitle">职位描述</h3>
+        <textarea id="jdTooltipContent"></textarea>
+        <button id="saveJdBtn" class="btn btn-primary">保存</button>
+        <button id="cancelJdBtn" class="btn btn-secondary">取消</button>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification">
+        <div id="notificationContent"></div>
+    </div>
+
+    <script>
+        // ==================== JavaScript 逻辑 ====================
+
+        const JOB_STAGES = {
+            sourcing: '寻源 (Sourcing)',
+            screening: '简历筛选 (Screening)',
+            phonechat: '电话沟通 (Phone Chat)',
+            interviewpanel: '团队面试 (Interview Panel)',
+            offer: '录用通知 (Offer)',
+            onboard: '已入职 (On Board)'
+        };
+        const STAGE_ORDER = Object.keys(JOB_STAGES);
+
+        // 模拟数据结构
+        let appData = {
+            activeJob: 'overview', // 默认显示总体数据统计
+            jobs: {
+                'Developer Flash 2.5': {
+                    title: 'Developer Flash 2.5',
+                    jd: '帮助编写、修复和理解代码。负责软件开发周期的各个阶段，包括需求分析、设计、编码、测试和部署。与跨职能团队合作，确保按时交付高质量的软件产品。',
+                    profile: {
+                        requirements: '计算机科学学士学位，3年以上软件开发经验',
+                        keypoints: '熟练掌握Java/Python，有微服务架构经验',
+                        interviewProcess: '技术笔试 -> 技术面试 -> HR面试',
+                        location: '北京',
+                        department: '工程部'
+                    },
+                    candidates: [
+                        { id: 1, name: '张三', email: 'zs@example.com', stage: 'sourcing', lastCompany: 'Google', lastJob: 'Dev', education: '清华大学', notes: '对新技术很感兴趣' },
+                        { id: 2, name: '李四', email: 'ls@example.com', stage: 'screening', lastCompany: 'Tencent', lastJob: 'PM', education: '北京大学', notes: '有丰富的产品经验' },
+                        { id: 3, name: '王五', email: 'wv@example.com', stage: 'interviewpanel', lastCompany: 'Meta', lastJob: 'FE', education: 'MIT', notes: '技术能力很强' },
+                        { id: 5, name: '赵七', email: 'zq@example.com', stage: 'sourcing', lastCompany: 'Amazon', lastJob: 'SDE', education: '上海交通大学', notes: '有云计算经验' },
+                        { id: 6, name: '钱八', email: 'qb@example.com', stage: 'offer', lastCompany: 'Microsoft', lastJob: 'SE', education: '浙江大学', notes: '沟通能力强' }
+                    ]
+                },
+                'Senior Decs Privacy Counsel': {
+                    title: 'Senior Decs Privacy Counsel',
+                    jd: '处理数据隐私相关法律事务。负责制定和实施数据保护政策，确保公司遵守所有适用的隐私法律法规。就数据隐私问题提供法律建议和支持。',
+                    profile: {
+                        requirements: '法学博士学位，7年以上隐私法经验',
+                        keypoints: '熟悉GDPR、CCPA等国际隐私法规',
+                        interviewProcess: '初筛 -> 法律案例分析 -> 合伙人面试',
+                        location: '上海',
+                        department: '法务部'
+                    },
+                    candidates: [
+                        { id: 4, name: '赵六', email: 'zl@example.com', stage: 'phonechat', lastCompany: 'Baidu', lastJob: 'Lawyer', education: '哈佛大学', notes: '熟悉国际隐私法规' },
+                        { id: 7, name: '孙九', email: 'sj@example.com', stage: 'screening', lastCompany: 'Alibaba', lastJob: 'Legal Advisor', education: '复旦大学', notes: '有电商法务经验' }
+                    ]
+                },
+                'Product Manager': {
+                    title: 'Product Manager',
+                    jd: '负责产品规划和管理。制定产品路线图，协调跨部门团队，分析市场趋势，推动产品创新和优化。确保产品满足用户需求并实现商业目标。',
+                    profile: {
+                        requirements: 'MBA学位，5年以上产品管理经验',
+                        keypoints: '有数据驱动的产品决策能力，熟悉敏捷开发',
+                        interviewProcess: 'HR初面 -> 产品案例分析 -> 部门负责人面试',
+                        location: '深圳',
+                        department: '产品部'
+                    },
+                    candidates: [
+                        { id: 8, name: '周十', email: 'zs@example.com', stage: 'interviewpanel', lastCompany: 'Tencent', lastJob: 'PM', education: '清华大学', notes: '有社交产品经验' },
+                        { id: 9, name: '吴十一', email: 'wsy@example.com', stage: 'offer', lastCompany: 'ByteDance', lastJob: 'Senior PM', education: '北京大学', notes: '擅长用户增长' },
+                        { id: 10, name: '郑十二', email: 'zes@example.com', stage: 'onboard', lastCompany: 'Netflix', lastJob: 'Group PM', education: 'Stanford University', notes: '国际化视野' }
+                    ]
+                },
+                'UX Designer': {
+                    title: 'UX Designer',
+                    jd: '负责用户体验设计。进行用户研究，创建线框图和原型，设计交互流程，确保产品的易用性和美观性。与产品和开发团队紧密合作。',
+                    profile: {
+                        requirements: '设计相关学位，3-5年UX设计经验',
+                        keypoints: '精通Sketch/Figma，有移动端设计经验',
+                        interviewProcess: '作品集评审 -> 设计挑战 -> 团队面试',
+                        location: '杭州',
+                        department: '设计部'
+                    },
+                    candidates: [
+                        { id: 11, name: '王十三', email: 'wsx@example.com', stage: 'sourcing', lastCompany: 'Apple', lastJob: 'UX Designer', education: 'Rhode Island School of Design', notes: '精通设计工具' },
+                        { id: 12, name: '李十四', email: 'lsx@example.com', stage: 'screening', lastCompany: 'Adobe', lastJob: 'Sr. Designer', education: 'Parsons School of Design', notes: '有动效设计能力' }
+                    ]
+                }
+            }
+        };
+
+        const kanbanContainer = document.getElementById('kanbanContainer');
+        const jobTabsContainer = document.getElementById('jobTabs');
+        const dashboardContainer = document.getElementById('dashboardContainer');
+        const candidateModal = document.getElementById('candidateModal');
+        const jdTooltip = document.getElementById('jdTooltip');
+        const candidateClose = candidateModal.querySelector('.close');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const cancelJdBtn = document.getElementById('cancelJdBtn');
+        const candidateForm = document.getElementById('candidateForm');
+        const jdTooltipTitle = document.getElementById('jdTooltipTitle');
+        const jdTooltipContent = document.getElementById('jdTooltipContent');
+        const saveJdBtn = document.getElementById('saveJdBtn');
+        const notification = document.getElementById('notification');
+        const notificationContent = document.getElementById('notificationContent');
+
+        // 当前正在编辑的职位
+        let currentEditingJob = null;
+
+        // --- 核心渲染函数 ---
+
+        /**
+         * @description 渲染Dashboard
+         */
+        function renderDashboard() {
+            dashboardContainer.innerHTML = '';
+            
+            if (appData.activeJob === 'overview') {
+                renderOverviewDashboard();
+            } else {
+                renderJobDashboard();
+            }
+        }
+
+        /**
+         * @description 渲染总体数据统计Dashboard
+         */
+        function renderOverviewDashboard() {
+            // 总职位数
+            const totalJobs = Object.keys(appData.jobs).length;
+            
+            // 总候选人数量
+            let totalCandidates = 0;
+            Object.values(appData.jobs).forEach(job => {
+                totalCandidates += job.candidates.length;
+            });
+            
+            // 各阶段候选人统计
+            const stageStats = {};
+            Object.keys(JOB_STAGES).forEach(stage => {
+                stageStats[stage] = 0;
+            });
+            
+            Object.values(appData.jobs).forEach(job => {
+                job.candidates.forEach(candidate => {
+                    stageStats[candidate.stage]++;
+                });
+            });
+            
+            // 按职位统计候选人数量
+            const jobCandidateStats = {};
+            Object.entries(appData.jobs).forEach(([jobTitle, job]) => {
+                jobCandidateStats[jobTitle] = job.candidates.length;
+            });
+            
+            // 创建统计卡片
+            createStatCard('统计概览', createOverviewChart(totalJobs, totalCandidates, stageStats));
+            createStatCard('阶段分布', createPieChart(stageStats));
+            createStatCard('职位分布', createBarChart(jobCandidateStats));
+            createTreeDiagram();
+        }
+
+        /**
+         * @description 渲染职位特定Dashboard
+         */
+        function renderJobDashboard() {
+            const currentJob = appData.jobs[appData.activeJob];
+            if (!currentJob) return;
+            
+            // 当前职位各阶段统计
+            const stageStats = {};
+            Object.keys(JOB_STAGES).forEach(stage => {
+                stageStats[stage] = 0;
+            });
+            
+            currentJob.candidates.forEach(candidate => {
+                stageStats[candidate.stage]++;
+            });
+            
+            // 创建统计卡片
+            createStatCard(`${currentJob.title} - 阶段统计`, createJobStageStats(stageStats));
+            createStatCard('阶段分布', createPieChart(stageStats));
+            createJobProfileCard();
+        }
+
+        /**
+         * @description 创建统计卡片
+         * @param {string} title - 卡片标题
+         * @param {string} content - 卡片内容
+         */
+        function createStatCard(title, content) {
+            const card = document.createElement('div');
+            card.className = 'dashboard-card';
+            card.innerHTML = `
+                <h3>${title}</h3>
+                <div class="chart-container">
+                    ${content}
+                </div>
+            `;
+            dashboardContainer.appendChild(card);
+        }
+
+        /**
+         * @description 创建岗位画像卡片
+         */
+        function createJobProfileCard() {
+            const currentJob = appData.jobs[appData.activeJob];
+            if (!currentJob) return;
+            
+            const card = document.createElement('div');
+            card.className = 'dashboard-card job-profile-section';
+            card.innerHTML = `
+                <h3>岗位画像 - ${currentJob.title}</h3>
+                <div class="profile-form-group">
+                    <label for="profileRequirements">硬性要求:</label>
+                    <textarea id="profileRequirements">${currentJob.profile.requirements || ''}</textarea>
+                </div>
+                <div class="profile-form-group">
+                    <label for="profileKeypoints">关键点:</label>
+                    <textarea id="profileKeypoints">${currentJob.profile.keypoints || ''}</textarea>
+                </div>
+                <div class="profile-form-group">
+                    <label for="profileInterviewProcess">面试流程:</label>
+                    <input type="text" id="profileInterviewProcess" value="${currentJob.profile.interviewProcess || ''}">
+                </div>
+                <div class="profile-form-group">
+                    <label for="profileLocation">地点:</label>
+                    <input type="text" id="profileLocation" value="${currentJob.profile.location || ''}">
+                </div>
+                <div class="profile-form-group">
+                    <label for="profileDepartment">部门:</label>
+                    <input type="text" id="profileDepartment" value="${currentJob.profile.department || ''}">
+                </div>
+                <button class="save-profile-btn" onclick="saveJobProfile()">保存画像</button>
+                <div style="clear: both;"></div>
+            `;
+            dashboardContainer.appendChild(card);
+        }
+
+        /**
+         * @description 创建树状图
+         */
+        function createTreeDiagram() {
+            const card = document.createElement('div');
+            card.className = 'dashboard-card';
+            card.innerHTML = `
+                <h3>组织架构</h3>
+                <div class="chart-container">
+                    <div class="tree-node">CTO</div>
+                    <div class="tree-children">
+                        <div class="tree-node">Engineering Director</div>
+                        <div class="tree-children">
+                            <div class="tree-node">Frontend Lead</div>
+                            <div class="tree-node">Backend Lead</div>
+                            <div class="tree-node">QA Lead</div>
+                        </div>
+                        <div class="tree-node">Product Director</div>
+                        <div class="tree-children">
+                            <div class="tree-node">Product Manager</div>
+                            <div class="tree-node">UX Designer</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            dashboardContainer.appendChild(card);
+        }
+
+        /**
+         * @description 创建概览图表
+         * @param {number} totalJobs - 总职位数
+         * @param {number} totalCandidates - 总候选人数
+         * @param {Object} stageStats - 阶段统计
+         * @returns {string} - 图表HTML
+         */
+        function createOverviewChart(totalJobs, totalCandidates, stageStats) {
+            return `
+                <div style="display: flex; flex-direction: column; justify-content: space-around; height: 100%;">
+                    <div>
+                        <strong>职位总数:</strong> ${totalJobs}
+                    </div>
+                    <div>
+                        <strong>候选人总数:</strong> ${totalCandidates}
+                    </div>
+                    <div>
+                        <strong>待面试:</strong> ${stageStats.interviewpanel || 0}
+                    </div>
+                    <div>
+                        <strong>已入职:</strong> ${stageStats.onboard || 0}
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * @description 创建职位阶段统计
+         * @param {Object} stageStats - 阶段统计
+         * @returns {string} - 统计HTML
+         */
+        function createJobStageStats(stageStats) {
+            let html = '<div class="stage-stats">';
+            Object.entries(stageStats).forEach(([stage, count]) => {
+                html += `
+                    <div class="stage-stat">
+                        <div>${JOB_STAGES[stage]}</div>
+                        <div class="count">${count}</div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            return html;
+        }
+
+        /**
+         * @description 创建饼图
+         * @param {Object} stageStats - 阶段统计
+         * @returns {string} - 图表HTML
+         */
+        function createPieChart(stageStats) {
+            // 这里简化处理，实际项目中可以使用Chart.js等库
+            let html = '<div style="display: flex; flex-direction: column; justify-content: center; height: 100%;">';
+            Object.entries(stageStats).forEach(([stage, count]) => {
+                if (count > 0) {
+                    html += `<div style="margin: 5px 0;"><div style="display: inline-block; width: 12px; height: 12px; background-color: ${getStageColor(stage)}; margin-right: 8px;"></div>${JOB_STAGES[stage]}: ${count}</div>`;
+                }
+            });
+            html += '</div>';
+            return html;
+        }
+
+        /**
+         * @description 创建条形图
+         * @param {Object} jobStats - 职位统计
+         * @returns {string} - 图表HTML
+         */
+        function createBarChart(jobStats) {
+            // 找到最大值用于计算比例
+            const maxValue = Math.max(...Object.values(jobStats));
+            
+            let html = '<div style="display: flex; flex-direction: column; justify-content: space-around; height: 100%;">';
+            Object.entries(jobStats).forEach(([job, count]) => {
+                const percentage = maxValue > 0 ? (count / maxValue) * 100 : 0;
+                html += `
+                    <div>
+                        <div style="font-size: 12px; margin-bottom: 3px;">${job}: ${count}</div>
+                        <div style="height: 15px; background-color: #e9ecef; border-radius: 3px;">
+                            <div style="height: 100%; width: ${percentage}%; background-color: #007bff; border-radius: 3px;"></div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            return html;
+        }
+
+        /**
+         * @description 获取阶段颜色
+         * @param {string} stage - 阶段
+         * @returns {string} - 颜色值
+         */
+        function getStageColor(stage) {
+            const stageColors = {
+                sourcing: '#ffc107',
+                screening: '#c8e613',
+                phonechat: '#a1cc2b',
+                interviewpanel: '#78b745',
+                offer: '#4caf50',
+                onboard: '#28a745'
+            };
+            return stageColors[stage] || '#6c757d';
+        }
+
+        /**
+         * @description 渲染单个候选人卡片
+         * @param {Object} candidate - 候选人数据对象
+         * @returns {string} - 卡片的 HTML 字符串
+         */
+        function createCandidateCard(candidate) {
+            const stageClass = `stage-${candidate.stage}`;
+            // 提取关键信息摘要
+            const summary = `
+                <div class="card-detail">
+                    邮箱: ${candidate.email}<br>
+                    最近公司/职位: ${candidate.lastCompany} / ${candidate.lastJob}<br>
+                    教育: ${candidate.education}
+                </div>
+            `;
+            
+            // 添加备注信息（如果有）
+            const notesSection = candidate.notes ? `<div class="card-notes">${candidate.notes}</div>` : '';
+
+            return `
+                <div class="candidate-card ${stageClass}" draggable="true" data-candidate-id="${candidate.id}">
+                    <div class="card-name">${candidate.name}</div>
+                    ${summary}
+                    ${notesSection}
+                </div>
+            `;
+        }
+
+        /**
+         * @description 渲染整个看板，根据当前激活的职位。
+         */
+        function renderKanbanBoard() {
+            kanbanContainer.innerHTML = ''; // 清空看板
+            
+            // 如果是总体统计视图，不显示看板
+            if (appData.activeJob === 'overview') {
+                kanbanContainer.innerHTML = '<div style="width:100%;text-align:center;padding:50px;color:#666;">请选择具体职位查看看板</div>';
+                return;
+            }
+            
+            const currentJob = appData.jobs[appData.activeJob];
+            if (!currentJob) return;
+
+            // 1. 遍历招聘阶段，创建看板列
+            STAGE_ORDER.forEach(stageKey => {
+                const stageName = JOB_STAGES[stageKey];
+
+                const column = document.createElement('div');
+                column.className = 'stage-column';
+                column.dataset.stage = stageKey; // 标记阶段，用于拖拽
+
+                // 添加新建候选人按钮
+                let html = `
+                    <div class="stage-header">
+                        ${stageName}
+                        <button class="add-candidate-btn" data-stage="${stageKey}">+ 添加</button>
+                    </div>`;
+
+                // 2. 筛选并添加该阶段的候选人卡片
+                const candidatesInStage = currentJob.candidates.filter(c => c.stage === stageKey);
+
+                candidatesInStage.forEach(candidate => {
+                    html += createCandidateCard(candidate);
+                });
+
+                column.innerHTML = html;
+                kanbanContainer.appendChild(column);
+            });
+
+            // 3. 重新绑定拖拽事件
+            bindDragAndDropEvents();
+            
+            // 4. 绑定卡片点击事件和添加候选人按钮事件
+            bindCardClickEvents();
+            bindAddCandidateEvents();
+        }
+
+        /**
+         * @description 渲染 Tab 按钮
+         */
+        function renderJobTabs() {
+            // 清空除 "新建职位" 按钮外的所有 Tab
+            const existingTabs = jobTabsContainer.querySelectorAll('.tab-btn');
+            existingTabs.forEach(btn => btn.remove());
+
+            // 添加总体统计Tab
+            const overviewTab = document.createElement('button');
+            overviewTab.className = `tab-btn ${appData.activeJob === 'overview' ? 'active' : ''}`;
+            overviewTab.textContent = '📊 总体统计';
+            overviewTab.dataset.jobTitle = 'overview';
+            
+            overviewTab.addEventListener('click', () => {
+                appData.activeJob = 'overview';
+                renderJobTabs();
+                renderDashboard();
+                renderKanbanBoard();
+            });
+            
+            jobTabsContainer.insertBefore(overviewTab, document.getElementById('newJobBtn'));
+
+            Object.keys(appData.jobs).forEach(jobTitle => {
+                const button = document.createElement('button');
+                button.className = `tab-btn ${jobTitle === appData.activeJob ? 'active' : ''}`;
+                button.textContent = jobTitle;
+                button.dataset.jobTitle = jobTitle;
+
+                button.addEventListener('click', (e) => {
+                    // 如果是点击在按钮上，则切换职位
+                    if (e.target === button) {
+                        appData.activeJob = jobTitle;
+                        renderJobTabs();
+                        renderDashboard();
+                        renderKanbanBoard();
+                    }
+                });
+                
+                // 添加鼠标悬停事件显示JD
+                button.addEventListener('mouseenter', (e) => {
+                    showJdTooltip(jobTitle, e);
+                });
+                
+                button.addEventListener('mouseleave', () => {
+                    // 添加延迟隐藏，防止用户无法点击tooltip中的按钮
+                    setTimeout(() => {
+                        if (!jdTooltip.matches(':hover')) {
+                            jdTooltip.style.display = 'none';
+                        }
+                    }, 200);
+                });
+
+                // 将新按钮插到 "新建职位" 按钮前面
+                jobTabsContainer.insertBefore(button, document.getElementById('newJobBtn'));
+            });
+        }
+
+        // --- JD Tooltip Functions ---
+
+        /**
+         * @description 显示JD Tooltip
+         * @param {string} jobTitle - 职位标题
+         * @param {Event} e - 鼠标事件
+         */
+        function showJdTooltip(jobTitle, e) {
+            // 如果是总体统计Tab，不显示JD
+            if (jobTitle === 'overview') return;
+            
+            const job = appData.jobs[jobTitle];
+            if (!job) return;
+            
+            currentEditingJob = jobTitle;
+            jdTooltipTitle.textContent = jobTitle;
+            jdTooltipContent.value = job.jd;
+            
+            // 定位tooltip
+            const rect = e.target.getBoundingClientRect();
+            jdTooltip.style.left = rect.left + 'px';
+            jdTooltip.style.top = (rect.bottom + 5) + 'px';
+            
+            jdTooltip.style.display = 'block';
+        }
+
+        /**
+         * @description 保存JD
+         */
+        function saveJd() {
+            if (currentEditingJob && appData.jobs[currentEditingJob]) {
+                appData.jobs[currentEditingJob].jd = jdTooltipContent.value;
+                jdTooltip.style.display = 'none';
+                showNotification('职位描述已保存', 'success');
+            }
+        }
+
+        /**
+         * @description 保存岗位画像
+         */
+        function saveJobProfile() {
+            const currentJob = appData.jobs[appData.activeJob];
+            if (currentJob) {
+                currentJob.profile = {
+                    requirements: document.getElementById('profileRequirements').value,
+                    keypoints: document.getElementById('profileKeypoints').value,
+                    interviewProcess: document.getElementById('profileInterviewProcess').value,
+                    location: document.getElementById('profileLocation').value,
+                    department: document.getElementById('profileDepartment').value
+                };
+                showNotification('岗位画像已保存', 'success');
+            }
+        }
+
+        /**
+         * @description 显示通知
+         * @param {string} message - 通知消息
+         * @param {string} type - 通知类型 (success, error, info)
+         */
+        function showNotification(message, type = 'info') {
+            notificationContent.textContent = message;
+            notification.className = `notification ${type} show`;
+            
+            // 3秒后自动隐藏
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // --- 拖拽交互逻辑 ---
+
+        let draggingCandidateId = null;
+
+        function bindDragAndDropEvents() {
+            const cards = document.querySelectorAll('.candidate-card');
+            const columns = document.querySelectorAll('.stage-column');
+
+            // 候选人卡片拖拽开始
+            cards.forEach(card => {
+                card.addEventListener('dragstart', (e) => {
+                    draggingCandidateId = parseInt(e.target.dataset.candidateId);
+                    e.target.classList.add('dragging');
+                    // 设置数据以供拖拽
+                    e.dataTransfer.setData('text/plain', draggingCandidateId);
+                });
+
+                card.addEventListener('dragend', (e) => {
+                    e.target.classList.remove('dragging');
+                    draggingCandidateId = null;
+                });
+            });
+
+            // 看板列拖拽事件
+            columns.forEach(column => {
+                column.addEventListener('dragover', (e) => {
+                    e.preventDefault(); // 必须调用，允许放置
+                    column.classList.add('drop-zone-highlight');
+                });
+
+                column.addEventListener('dragleave', () => {
+                    column.classList.remove('drop-zone-highlight');
+                });
+
+                column.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    column.classList.remove('drop-zone-highlight');
+
+                    const candidateId = parseInt(e.dataTransfer.getData('text/plain'));
+                    const newStage = column.dataset.stage;
+
+                    if (candidateId) {
+                        moveCandidateToStage(candidateId, newStage);
+                    }
+                });
+            });
+        }
+
+        /**
+         * @description 更新候选人的阶段，并重新渲染。
+         * @param {number} id - 候选人ID
+         * @param {string} newStage - 新的阶段 key
+         */
+        function moveCandidateToStage(id, newStage) {
+            const currentJob = appData.jobs[appData.activeJob];
+            const candidate = currentJob.candidates.find(c => c.id === id);
+
+            if (candidate && candidate.stage !== newStage) {
+                console.log(`移动 ${candidate.name} 从 ${candidate.stage} 到 ${newStage}`);
+                candidate.stage = newStage;
+                // 实际应用中：这里应该调用 saveData() 来持久化数据
+                renderKanbanBoard(); // 重新渲染看板以反映变化
+                renderDashboard(); // 更新dashboard数据
+                showNotification(`候选人已移动到 ${JOB_STAGES[newStage]} 阶段`, 'success');
+            }
+        }
+
+        // --- 候选人详情和编辑功能 ---
+
+        /**
+         * @description 打开候选人模态框
+         * @param {Object|null} candidate - 候选人对象，如果为空则表示新建
+         * @param {string} stage - 阶段，仅在新建时使用
+         */
+        function openCandidateModal(candidate = null, stage = 'sourcing') {
+            if (candidate) {
+                // 编辑现有候选人
+                document.getElementById('modalTitle').textContent = '编辑候选人';
+                document.getElementById('candidateId').value = candidate.id;
+                document.getElementById('candidateName').value = candidate.name;
+                document.getElementById('candidateEmail').value = candidate.email;
+                document.getElementById('lastCompany').value = candidate.lastCompany || '';
+                document.getElementById('lastJob').value = candidate.lastJob || '';
+                document.getElementById('education').value = candidate.education || '';
+                document.getElementById('candidateStage').value = candidate.stage;
+                document.getElementById('candidateNotes').value = candidate.notes || '';
+            } else {
+                // 新建候选人
+                document.getElementById('modalTitle').textContent = '新建候选人';
+                candidateForm.reset();
+                document.getElementById('candidateStage').value = stage;
+                document.getElementById('candidateId').value = '';
+            }
+            
+            candidateModal.style.display = 'block';
+        }
+
+        /**
+         * @description 关闭候选人模态框
+         */
+        function closeCandidateModal() {
+            candidateModal.style.display = 'none';
+        }
+
+        /**
+         * @description 保存候选人信息
+         * @param {Event} e - 表单提交事件
+         */
+        function saveCandidate(e) {
+            e.preventDefault();
+            
+            // 如果是总体统计视图，不能添加候选人
+            if (appData.activeJob === 'overview') {
+                showNotification('请先选择一个职位', 'error');
+                return;
+            }
+            
+            const currentJob = appData.jobs[appData.activeJob];
+            const id = document.getElementById('candidateId').value;
+            const candidateData = {
+                name: document.getElementById('candidateName').value,
+                email: document.getElementById('candidateEmail').value,
+                lastCompany: document.getElementById('lastCompany').value,
+                lastJob: document.getElementById('lastJob').value,
+                education: document.getElementById('education').value,
+                stage: document.getElementById('candidateStage').value,
+                notes: document.getElementById('candidateNotes').value
+            };
+            
+            if (id) {
+                // 更新现有候选人
+                const candidate = currentJob.candidates.find(c => c.id == id);
+                if (candidate) {
+                    Object.assign(candidate, candidateData);
+                }
+                showNotification('候选人信息已更新', 'success');
+            } else {
+                // 创建新候选人
+                const newId = Date.now(); // 简单生成唯一ID
+                currentJob.candidates.push({
+                    id: newId,
+                    ...candidateData
+                });
+                showNotification('新候选人已添加', 'success');
+            }
+            
+            closeCandidateModal();
+            renderKanbanBoard();
+            renderDashboard(); // 更新dashboard数据
+        }
+
+        /**
+         * @description 绑定卡片点击事件
+         */
+        function bindCardClickEvents() {
+            const cards = document.querySelectorAll('.candidate-card');
+            cards.forEach(card => {
+                card.addEventListener('click', (e) => {
+                    // 防止拖拽时触发点击事件
+                    if (e.target.classList.contains('add-candidate-btn')) {
+                        return;
+                    }
+                    
+                    const candidateId = parseInt(card.dataset.candidateId);
+                    const currentJob = appData.jobs[appData.activeJob];
+                    const candidate = currentJob.candidates.find(c => c.id === candidateId);
+                    
+                    if (candidate) {
+                        openCandidateModal(candidate);
+                    }
+                });
+            });
+        }
+
+        /**
+         * @description 绑定添加候选人按钮事件
+         */
+        function bindAddCandidateEvents() {
+            const addButtons = document.querySelectorAll('.add-candidate-btn');
+            addButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const stage = button.dataset.stage;
+                    openCandidateModal(null, stage);
+                });
+            });
+        }
+
+        // --- 新建职位功能 (简化) ---
+
+        document.getElementById('newJobBtn').addEventListener('click', () => {
+            const newTitle = prompt("请输入新职位的名称 (如：Frontend Engineer)：");
+            if (newTitle && newTitle.trim()) {
+                const uniqueTitle = newTitle.trim();
+                if (!appData.jobs[uniqueTitle]) {
+                    appData.jobs[uniqueTitle] = {
+                        title: uniqueTitle,
+                        jd: '请在此处填写职位描述...',
+                        profile: {
+                            requirements: '',
+                            keypoints: '',
+                            interviewProcess: '',
+                            location: '',
+                            department: ''
+                        },
+                        candidates: []
+                    };
+                    appData.activeJob = uniqueTitle;
+                    // 实际应用中：这里应该调用 saveData()
+                    renderJobTabs();
+                    renderDashboard();
+                    renderKanbanBoard();
+                    showNotification(`职位 "${uniqueTitle}" 已创建！`, 'success');
+                } else {
+                    showNotification('职位名称已存在！', 'error');
+                }
+            }
+        });
+
+        // --- 模态框事件监听 ---
+
+        candidateClose.addEventListener('click', closeCandidateModal);
+        cancelBtn.addEventListener('click', closeCandidateModal);
+        cancelJdBtn.addEventListener('click', () => {
+            jdTooltip.style.display = 'none';
+        });
+        saveJdBtn.addEventListener('click', saveJd);
+        
+        candidateForm.addEventListener('submit', saveCandidate);
+
+        // 点击模态框外部关闭
+        window.addEventListener('click', (e) => {
+            if (e.target === candidateModal) {
+                closeCandidateModal();
+            }
+        });
+        
+        // JD Tooltip外部点击关闭
+        jdTooltip.addEventListener('mouseleave', () => {
+            setTimeout(() => {
+                jdTooltip.style.display = 'none';
+            }, 200);
+        });
+
+        // --- 初始化 ---
+        renderJobTabs();
+        renderDashboard();
+        renderKanbanBoard();
+
+        // 实际应用中：需要添加 save/load data (localStorage 或后端 API)
+        
+        // 将saveJobProfile函数暴露到全局作用域
+        window.saveJobProfile = saveJobProfile;
+    </script>
+</body>
+</html>
